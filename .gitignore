@@ -1,0 +1,26 @@
+# Secrets — DO NOT COMMIT
+.deepl_key
+.env
+
+# Whisper / model outputs
+output/
+*.pt
+*.bin
+*.wav
+*.mp4
+*.mp3
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# Tools state
+.omc/
+
+# OS
+Thumbs.db
+.DS_Store

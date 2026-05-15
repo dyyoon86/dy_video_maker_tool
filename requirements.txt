@@ -1,0 +1,7 @@
+faster-whisper>=1.0.0
+imageio-ffmpeg>=0.4.9
+PyQt6>=6.6.0
+deep-translator>=1.11.4
+srt>=3.5.3
+tqdm>=4.66.0
+deepl>=1.18.0
