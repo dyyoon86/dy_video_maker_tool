@@ -1,0 +1,5 @@
+deepl>=1.18.0
+srt>=3.5.3
+tqdm>=4.66.0
+PyQt6>=6.6.0
+deep-translator>=1.11.4

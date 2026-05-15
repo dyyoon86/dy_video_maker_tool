@@ -1,91 +1,137 @@
-# video_transcriber
+# video_maker_tool
 
-영상에서 음성을 추출해 **자막(SRT)** 을 생성하는 도구. faster-whisper 기반, 다국어 자동 감지, PyQt6 GUI 제공.
+영상 콘텐츠 제작 전 과정을 지원하는 통합 툴킷. 자막 추출 → 번역 → 편집 자동화까지 한 워크스페이스에서 처리.
 
-## 설치
+## 📦 구성
+
+| 도구 | 위치 | 용도 |
+| :--- | :--- | :--- |
+| **transcriber** | [`transcriber/`](./transcriber/) | 영상에서 음성 → 자막(SRT/TXT) 추출. faster-whisper 기반, PyQt6 GUI |
+| **translator** | [`translator/`](./translator/) | SRT 자막 → 다른 언어로 번역. DeepL API 기반, PyQt6 GUI + 드래그&드롭 |
+| **review_to_pp** | [`review_to_pp/`](./review_to_pp/) | 리뷰 스크립트(.txt/.json/.csv) → Premiere Pro XML + SRT 자동 생성 |
+
+### 표준 워크플로우
 
 ```
+[원본 영상]
+   ↓ transcriber (음성 → 자막 추출)
+[자막 .srt]
+   ↓ translator (다국어 번역, 선택)
+[번역된 자막]
+   ↓ (리뷰 스크립트 작성)
+[리뷰 스크립트 .txt]
+   ↓ review_to_pp (Premiere XML + 자막 SRT 생성)
+[Premiere Pro 임포트] → 편집 → 완성
+```
+
+## 🚀 설치
+
+각 도구는 독립적으로 동작합니다. 도구별 디렉토리에서 설치하거나, 한 번에 전부:
+
+```powershell
 pip install -r requirements.txt
 ```
 
-설치 용량 안내:
-- faster-whisper / ctranslate2 / tokenizers: 약 500MB
-- PyQt6: 약 60MB
-- 첫 실행 시 Whisper 모델은 별도로 자동 다운로드 (`large-v3` 기준 ~3GB)
+> Python 3.10+ 필요 (3.12 권장, Windows 검증). 자세한 사용법은 각 도구의 `README.md` 또는 본 README 의 도구별 섹션 참고.
 
-## 사용법
+## 📋 각 도구 빠른 안내
 
-### 1) GUI (권장)
+### 🎙️ transcriber — 음성 → 자막
 
-```
-python gui.py
-```
+영상/오디오에서 음성을 추출해 SRT 자막을 생성. faster-whisper 다국어 자동 감지.
 
-- **Browse…** 로 영상/오디오 파일 선택 (`.mp4 .mkv .avi .mov .webm .mp3 .wav .m4a` 등)
-- **Model** 에서 정확도/속도 균형 선택:
-  - `tiny` / `base` : 빠름, 정확도 낮음
-  - `small` / `medium` : 균형
-  - `large-v3` : 가장 정확함 (권장)
-- **Language** 는 `auto-detect` 가 기본. 특정 언어로 강제하려면 선택
-- **Output** 에서 `.srt` / `.txt` / `.timestamped.txt` 중 원하는 만큼 체크
-- **Generate subtitles** 클릭. 진행률 바와 로그가 실시간 표시됨
-- 완료 후 **Open output folder** 로 결과 폴더 열기
+```powershell
+# CLI
+python transcriber/transcribe.py "C:\path\to\video.mp4" --model large-v3
 
-### 2) CLI
-
-```
-python transcribe.py "C:\path\to\video.mp4"
+# GUI
+python transcriber/transcribe_gui.py
 ```
 
-자주 쓰는 옵션:
+자세한 옵션: [`transcriber/`](./transcriber/) 디렉토리 참고. 모델 선택, 출력 형식, GPU/CPU 설정, ffmpeg 내장 등.
 
-```
-python transcribe.py video.mp4 --model large-v3 --language ko --format srt,txt
-python transcribe.py podcast.mp3 --model medium --format srt --output-dir D:\subs
-python transcribe.py video.mp4 --force
-```
+### 🌐 translator — SRT 번역
 
-| 옵션 | 설명 | 기본값 |
-|------|------|--------|
-| `--model` | `tiny`, `base`, `small`, `medium`, `large-v3` | `large-v3` |
-| `--language` | `ko`, `en`, `ja`, `zh` 등 ISO 코드. 생략 시 자동 감지 | 자동 감지 |
-| `--format` | `srt`, `txt`, `timestamped` (콤마 구분) | `srt` |
-| `--output-dir` | 출력 폴더 | `./output` |
-| `--force` | 기존 결과가 있어도 다시 생성 | off |
+DeepL API 로 SRT 자막을 한국어/영어 등으로 번역.
 
-## 출력 형식
+```powershell
+# CLI
+python translator/deepl_translate_srt.py input.ja.srt --target KO
 
-- `videoname.srt` : 표준 자막 파일 (`HH:MM:SS,ms --> HH:MM:SS,ms`)
-- `videoname.txt` : 타임스탬프 없는 순수 텍스트
-- `videoname.timestamped.txt` : `[mm:ss]` 타임스탬프 포함 텍스트
+# GUI (드래그&드롭)
+translator\deepl_gui.bat
 
-## 소요 시간 (참고)
-
-| 모델 | 1시간 영상 (CPU) | 1시간 영상 (GPU/CUDA) |
-|------|----------------|----------------------|
-| tiny | ~2분 | ~30초 |
-| base | ~4분 | ~1분 |
-| small | ~8분 | ~1.5분 |
-| medium | ~15분 | ~2분 |
-| large-v3 | ~25분 | ~3분 |
-
-## ffmpeg
-
-별도 설치 불필요. `imageio-ffmpeg` 가 ffmpeg 바이너리를 포함합니다.
-
-## 회사망 SSL 문제
-
-기본적으로 SSL 인증서 검증을 비활성화해 MITM 프록시 환경에서도 모델 다운로드가 됩니다.
-
-SSL 검증을 활성화하려면:
-
-```
-set VERIFY_SSL=1
-python gui.py
+# 드래그&드롭 직접 변환 (가장 빠름)
+# → .srt 파일을 translator\translate_drop.bat 에 끌어다 놓기
 ```
 
-## 시스템 요구사항
+DeepL API 키 설정:
+- 환경변수 `DEEPL_API_KEY`, 또는
+- `translator/.deepl_key` 파일에 키 한 줄로 저장, 또는
+- `--set-key <KEY>` 옵션으로 일회 등록
 
-- Python 3.10+ (3.12 권장, Windows에서 검증)
-- RAM: CPU 모드 약 3GB 이상 권장 (large-v3는 5GB+ 권장)
-- GPU 모드: CUDA 지원 NVIDIA GPU + 4GB+ VRAM
+### ✂️ review_to_pp — 리뷰 스크립트 → Premiere
+
+타임스탬프가 박힌 리뷰 스크립트(.txt/.json/.csv)를 받아 **Premiere Pro 임포트용 XML** 과 **내레이션 SRT** 를 한 번에 생성.
+
+```powershell
+# CLI
+python review_to_pp/review_to_pp.py review.txt
+
+# GUI (드래그&드롭, 일괄 변환)
+review_to_pp\review_to_pp_gui.bat
+```
+
+자세한 입력 형식과 Premiere 임포트 방법: [`review_to_pp/README.md`](./review_to_pp/README.md)
+
+## 🛠 시스템 요구사항
+
+| 항목 | 요구사항 |
+| :--- | :--- |
+| Python | 3.10+ (3.12 권장) |
+| OS | Windows 10/11 검증, macOS/Linux 호환 |
+| RAM | 일반 사용 3GB+, Whisper large-v3 5GB+ |
+| GPU (선택) | CUDA NVIDIA GPU, 4GB+ VRAM (transcriber 가속) |
+| ffmpeg | 별도 설치 불필요 (`imageio-ffmpeg` 가 포함) |
+
+## 🔐 회사망 / SSL 인터셉트 환경
+
+기본적으로 SSL 검증을 비활성화하도록 설정되어 있어 MITM 프록시 환경에서도 동작합니다.
+
+엄격 검증을 켜려면:
+```powershell
+$env:VERIFY_SSL = "1"
+python transcriber/transcribe_gui.py
+```
+
+## 📁 디렉토리 구조
+
+```
+video_maker_tool/
+├── README.md                    ← (이 파일)
+├── requirements.txt             ← 모든 도구 통합 의존성
+├── .gitignore
+│
+├── transcriber/                 ← 영상 → 자막
+│   ├── transcribe.py            (CLI)
+│   └── transcribe_gui.py        (GUI)
+│
+├── translator/                  ← 자막 번역
+│   ├── deepl_translate_srt.py   (CLI 메인)
+│   ├── deepl_gui.py             (GUI)
+│   ├── deepl_gui.bat            (GUI 런처)
+│   ├── translate_drop.bat       (드래그&드롭)
+│   ├── translate_srt.py         (예전 버전 / 백업)
+│   └── .deepl_key               (gitignore, API 키)
+│
+└── review_to_pp/                ← 리뷰 → Premiere XML
+    ├── review_to_pp.py          (CLI)
+    ├── review_to_pp_gui.py      (GUI)
+    ├── review_to_pp_gui.bat
+    ├── README.md
+    └── examples/
+```
+
+## 📜 라이선스
+
+개인 / 비상업적 사용 무제한. 회사 정책에 따라 사용.
